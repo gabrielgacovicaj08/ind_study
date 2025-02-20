@@ -33,3 +33,122 @@ of a html page. This is an example of what I got from the extraction of the [Abo
     }
   }
 ```
+
+
+
+
+
+
+
+
+
+
+
+# Using Langchain to load web pages
+LangChain is a framework designed to simplify the development of applications that use large language models (LLMs) by providing tools for retrieval, memory, and chaining. It helps developers build chatbots, RAG applications, agents, and automation tools by integrating LLMs with external data sources, APIs, and databases. 
+
+## `Document` object
+When extracting content from web pages, Langchain gives back a `Document` object that consist of key value pair: content (the actual text and information extracted) and a metadata which provides information about where the content was extracted. The metadata could be really simple or a little more detailed. Here are some examples: 
+### Simple Document
+```python
+document = Document(
+    page_content="Hello, world!",
+    metadata={"source": "https://example.com"}
+)
+```
+### Advanced Document
+```python
+Document(metadata={'source': './example_data/layout-parser-paper.pdf', 'coordinates': {'points': ((16.34, 213.36), (16.34, 253.36), (36.34, 253.36), (36.34, 213.36)), 'system': 'PixelSpace', 'layout_width': 612, 'layout_height': 792}, 'file_directory': './example_data', 'filename': 'layout-parser-paper.pdf', 'languages': ['eng'], 'last_modified': '2024-02-27T15:49:27', 'page_number': 1, 'filetype': 'application/pdf', 'category': 'UncategorizedText', 'element_id': 'd3ce55f220dfb75891b4394a18bcb973'}, page_content='1 2 0 2')
+```
+
+Let's start with the simple extraction. The library we will need are `langchain-community` and `beautifulsoup4`. For my project I will try to extract the https://msutexas.edu/about/ web page.
+We frist import the libraries:
+```python
+import bs4
+from langchain_community.document_loaders import WebBaseLoader
+```
+Then we copy the url from the web page
+```python
+page_url = 'https://msutexas.edu/about/'
+```
+Then we load the content of the page with the `WebBaseLoader` package and `alazy_load`
+```python
+loader = WebBaseLoader(web_paths=[page_url])
+docs = []
+async for doc in loader.alazy_load():
+    docs.append(doc)
+```
+And this is what we get back for the `metadata`
+```python
+{
+    'source': 'https://msutexas.edu/about/',
+    'title': '\r\n\t\t\tAbout MSU Texas »MSU Texas »\r\n\t\t',
+    'description': 'General information about MSU and the campus.',
+    'language': 'en'
+}
+```
+And this is are the first 250 character of the `page_content`
+```python
+'\n\n\n\n\n\n\n\r\n\t\t\tAbout MSU Texas »MSU Texas »\r\n\t\t\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSkip to main content\n\n\n\n \n\n\n\n\n\n\nLogin\n\n\nmyMSUTexas\nD2L\nFaculty/Staff E-mail\n\n\n\n\n  \nSearch MSU Texas\n Search  \n\n\n\n\nApply\nAlumni\nFaculty & Staff\nDirectory\nMa'
+```
+As you can see the `page_content` value is filled with extra carhacter that we don't need to embed and store in the database. Said so, we need further parsing on the content so that all the content is omogenous and ready to be split in chunks. In order to get a more omegenous text we'll have to change a couple of parameters in the `WebBaseLoader` function
+```python
+loader = WebBaseLoader(
+    web_paths=[page_url],
+    bs_get_text_kwargs={"separator": " | ", "strip": True},
+)
+```
+In this case the `bs_get_text_kwargs` paramater takes in a `separator` that will divide each block of text with a vertical bar and `strip = True` which removes leading and trailing whitespace. And this is the new output:
+```python
+'About MSU Texas »MSU Texas » | Skip to main content | Login | myMSUTexas | D2L | Faculty/Staff E-mail | Search MSU Texas | Search | Apply | Alumni | Faculty & Staff | Directory | Map | Athletics | Registrar | Academic Calendar | Address Changes | Class Schedule | Apply for Graduation | Commencement | Texas Success Initiative | Transcripts - How to Order | University Catalogs | Veterans Affairs | WebWorld: Registration, Grades, Payments, etc. | Registrar Homepage | Student Life | About MSU | Admissions | Undergraduate | Graduate | Global Education | Admissions Homepage | Academics | MSU Texas Homepage | Menu | Home | About MSU Texas | About MSU Texas | Why MSU Texas | Midwestern State University (MSU Texas) is a public university in Wichita Falls, Texas. We are a small and mighty community of Mustangs, with an average class size of just 30 students, 75+ degree programs to choose from'
+```
+The parsed content looks definetely better and cleaner but since RAG models are based on semantic search or in simpler term they retrieve the information that looks closer to the query, all those phrases like: Skip to main content, myMSUTexas, Faculty & Staff etc.. they will only make the retrivier job harder lowering the accuracy and efficency of the RAG system. 
+
+Our next goal is to extract only information that are relevant. I noticed that all the unrelevant piece of content are under either a `<a>` tag or a `<href>` so I tried to modify some paramaters of the `WebBaseLoader` function but unfortunately I did not find a way to do that. I tried to use the `BeautifulSoup(doc.page_content, "lxml")` that gives you back that html page with tags as well. This is the output:
+```python
+<html><body><p>About MSU Texas »MSU Texas » | Skip to main content | Login | myMSUTexas | D2L | Faculty/Staff E-mail | Search MSU Texas | Search | Apply | Alumni | Faculty &amp; Staff | Directory | Map | Athletics | Registrar | Academic Calendar | Address Changes | Class Schedule | Apply for Graduation | Commencement | Texas Success Initiative | Transcripts - How to Order | University Catalogs | Veterans Affairs | WebWorld: Registration, Grades, Payments, etc. | Registrar Homepage | Student Life | About MSU | Admissions | Undergraduate | Graduate | Global Education | Admissions Homepage | Academics | MSU Texas Homepage | Menu | Home | About MSU Texas | About MSU Texas | Why MSU Texas | Midwestern State University (MSU Texas) is a public university in Wichita Falls, Texas. We are a small and mighty community of Mustangs, with an average class size of just 30 students</p></body></html>
+```
+As you can notice it doesn't go deep enouhg into `<a>` and `<href>` tags and it puts everything togeter under the `<p>` tag. So I found another way to extract the raw HTML content combining the `request` and the `BeautifulSoup` libraries. Here is the code:
+```python
+url = "https://msutexas.edu/about/"  
+headers = {"User-Agent": "Chrome/110.0.0.0"}
+
+response = requests.get(url, headers=headers)
+html_content = response.text
+
+soup = BeautifulSoup(html_content, "lxml")
+```
+And this is some of the output:
+```python
+<!DOCTYPE html>
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="c1a657c90a0008483af171afffc0d6ab" name="id"/>
+<title>
+			About MSU Texas »MSU Texas »
+		</title>
+<meta content="about" name="keywords"/>
+<meta content="General information about MSU and the campus." name="description"/>
+<link href="https://msutexas.edu/about/" rel="canonical"/>
+<link as="style" href="../_assets/css/fonts.css"/>
+<link as="style" href="../_assets/css/tw/components.css"/>
+<link href="/_assets/css/site.css?v=1734642322633" rel="stylesheet"/>
+<link href="../_assets/favicons/apple-touch-icon-57x57.png" rel="apple-touch-icon-precomposed" sizes="57x57"/>
+<link href="../_assets/favicons/apple-touch-icon-114x114.png" rel="apple-touch-icon-precomposed" sizes="114x114"/>
+<link href="../_assets/favicons/apple-touch-icon-72x72.png" rel="apple-touch-icon-precomposed" sizes="72x72"/>
+<link href="../_assets/favicons/apple-touch-icon-144x144.png" rel="apple-touch-icon-precomposed" sizes="144x144"/>
+<link href="../_assets/favicons/apple-touch-icon-60x60.png" rel="apple-touch-icon-precomposed" sizes="60x60"/>
+<link href="../_assets/favicons/apple-touch-icon-120x120.png" rel="apple-touch-icon-precomposed" sizes="120x120"/>
+<link href="../_assets/favicons/apple-touch-icon-76x76.png" rel="apple-touch-icon-precomposed" sizes="76x76"/>
+<link href="../_assets/favicons/apple-touch-icon-152x152.png" rel="apple-touch-icon-precomposed" sizes="152x152"/>
+<link href="../_assets/favicons/favicon-196x196.png" rel="icon" sizes="196x196" type="image/png"/>
+<link href="../_assets/favicons/favicon-96x96.png" rel="icon" sizes="96x96" type="image/png"/>
+<link href="../_assets/favicons/favicon-32x32.png" rel="icon" sizes="32x32" type="image/png"/>
+<link href="../_assets/favicons/favicon-16x16.png" rel="icon" sizes="16x16" type="image/png"/>
+<link href="../_assets/favicons/favicon-128.png" rel="icon" sizes="128x128" type="image/png"/>
+```
+Now that we have all the tags available we can proceed and eliminate the one that we actually don't need.
+
