@@ -177,6 +177,6 @@ splits = splitter.split_documents([docs])
 `from_tiktoken_encoder` is a class method that initializes the `RecursiveCharacterTextSplitter` using a token-based approach instead of a character-based one. Instead of measuring characters (which can vary in byte size), this method counts tokens, making it better suited for token-limited models like OpenAI’s GPT-4.
 The `chunk_size` parameters indicates how many tokens can a single chunk contains at most, while the `chunk_overlap` ensures some overlap between consecutive chunks, preventing loss of context when breaking text.
 
-## Langchain `Unstructured` web scraping
+
 
 
