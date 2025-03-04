@@ -150,5 +150,33 @@ And this is some of the output:
 <link href="../_assets/favicons/favicon-16x16.png" rel="icon" sizes="16x16" type="image/png"/>
 <link href="../_assets/favicons/favicon-128.png" rel="icon" sizes="128x128" type="image/png"/>
 ```
-Now that we have all the tags available we can proceed and eliminate the one that we actually don't need.
+Now that we have all the tags available we can proceed and eliminate the one that we actually don't need. 
+```python
+for a_tag in soup.find_all(['a','button']):
+    a_tag.decompose()  # Deletes links
+clean_text = soup.get_text(separator=" | ", strip=True)
+```
+This 3 lines of code helped me getting rid of the tags that contained irrelevant information. This is now the clean output:
+```python
+About MSU Texas »MSU Texas » | About MSU Texas | Why MSU Texas | Midwestern State University (MSU Texas) is a public university in Wichita Falls, Texas. We are a small and mighty community of Mustangs, with an average class size of just 30 students, 75+ degree programs to choose from, and an opportunity-rich location halfway between Oklahoma City and the Dallas-Fort Worth metroplex. Our | unites us so that you will be supported to be your best in all you set out to do. | Anchor links to help you more quickly navigate the MSU Texas About Us webpage. | More Info | More Info | Find Your Place on Our Unique Campus | Mustangs are scientists and artists. Athletes and bookworms. Texas natives and students from places all over the map. You will find your space and your place here as a member of the Mustangs community. And no matter where you are coming from or where you want to go next, you will find success with our support. | Meet President Stacia Haynie, Ph.D. | Hello there! MSU Texas has been home for me since I first set foot on campus as an undergraduate student. In fact, it is where I found the support and encouragement I needed to reach my goals. I cannot wait to welcome you to find your own place here with us. | 16:1 | Student-to-Faculty Ratio:
+```
+Now that I have a clean content that conatains basically only useful information I can creates documents objects with as metadata the url. Here the code:
+```python
+docs = Document(
+    page_content=clean_text,
+    metadata = {'source': url}
+)
+```
+after having created the document object we can go ahead and split the text into chunks so that we can embed each chunks. In order to accomplish this step I will be using the `RecursiveCharacterTextSplitter` class by langchain. The `RecursiveCharacterTextSplitter` uses a recursive splitting strategy based on a list of separators, breaking the text at the largest possible chunk size while respecting logical text boundaries (like paragraphs, sentences, or words).
+```python
+splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        chunk_size=100, chunk_overlap=20
+    )
+splits = splitter.split_documents([docs])
+```
+`from_tiktoken_encoder` is a class method that initializes the `RecursiveCharacterTextSplitter` using a token-based approach instead of a character-based one. Instead of measuring characters (which can vary in byte size), this method counts tokens, making it better suited for token-limited models like OpenAI’s GPT-4.
+The `chunk_size` parameters indicates how many tokens can a single chunk contains at most, while the `chunk_overlap` ensures some overlap between consecutive chunks, preventing loss of context when breaking text.
+
+## Langchain `Unstructured` web scraping
+
 
