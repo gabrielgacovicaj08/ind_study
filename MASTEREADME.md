@@ -1,7 +1,9 @@
-# Introduction
+# Introduction 
 Retrieving information about a college has never been easy—whether it's finding out which classes are offered next semester, the deadline to drop a class, or how to apply for a scholarship. Typically, searching for these answers online leads to the school’s website, which is filled with numerous tabs and pages, requiring time and effort to navigate. This process can be frustrating and discouraging, especially for students who need quick and accurate information.<br>
 
 This led me to think: why not leverage AI to simplify and streamline this experience? That’s when I discovered Retrieval-Augmented Generation (RAG) models—a powerful AI approach that combines the ability to retrieve relevant information from an external knowledge base with the natural language generation capabilities of large language models. By implementing a RAG model, we can create an intuitive and efficient system that allows students to get precise answers instantly, without the hassle of searching through multiple pages.
+
+https://www.canva.com/design/DAGmn3zAAmE/5idT6avsaOJD0U2VBeWDPA/edit
 
 ## What is RAG?
 RAG (Retrieval-Augmented Generation) is an AI approach that enables the creation of a chatbot capable of answering questions based on a specific set of information—in simple terms, it allows AI to retrieve and generate responses using a knowledge source of your choice.<br>
