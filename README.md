@@ -1,4 +1,13 @@
 # Using Langchain to load web pages
+
+## Environment setup
+Create your local secrets file from template:
+
+```bash
+cp .env.example .env
+```
+
+Never commit `.env` with real API keys.
 LangChain is a framework designed to simplify the development of applications that use large language models (LLMs) by providing tools for retrieval, memory, and chaining. It helps developers build chatbots, RAG applications, agents, and automation tools by integrating LLMs with external data sources, APIs, and databases. 
 
 ## `Document` object
