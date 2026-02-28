@@ -21,11 +21,13 @@ Initial review complete (security alert)
 ## Completed in this pass
 - Added `.env.example` template with safe placeholders
 - Updated `.gitignore` to allow tracking `.env.example` while keeping `.env` private
+- Removed `.env` from git tracking (`git rm --cached .env`), so local secrets stay local
+- Added explicit secure setup note in README for repos that previously tracked `.env`
 
 ## Next
 1. Rotate exposed keys immediately (manual action)
-2. Remove `.env` from git tracking/history (`git rm --cached .env` + history rewrite if needed)
-3. Add secure env setup notes to README
+2. Remove secrets from git history in a dedicated rewrite pass
+3. Optionally add pre-commit secret scanning (`detect-secrets` or `gitleaks`)
 
 ## Blockers
 - None
