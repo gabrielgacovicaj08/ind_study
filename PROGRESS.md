@@ -29,5 +29,10 @@ Initial review complete (security alert)
 2. Remove secrets from git history in a dedicated rewrite pass
 3. Optionally add pre-commit secret scanning (`detect-secrets` or `gitleaks`)
 
+## Next
+1. Rotate exposed keys immediately (manual action)
+2. Remove `.env` from git tracking/history (`git rm --cached .env` + history rewrite if needed)
+3. Add secure env setup notes to README
+
 ## Blockers
 - None
